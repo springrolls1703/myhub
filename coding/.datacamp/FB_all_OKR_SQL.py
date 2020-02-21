@@ -2,69 +2,66 @@
 #There are four parts in this SQL:
 #Part_1: Activation
 #Part_2: CMV-NMV-Order JOIN activation
-#Part_2.1: Session
 #Part_3: Cost
 #Final_Run
 
 #Part_1
-WITH 
-fact_sales_order_all AS (
-  SELECT customer_key 
-        , order_code 
-        , original_code
-        , date_key 
-        , order_type
-        , sale_channel_key
-        , date_at
-  FROM    `tiki-dwh.dwh.fact_sales_order_nmv_2017` 
-UNION ALL  
-
-  SELECT customer_key 
-        , order_code 
-        , original_code
-        , date_key 
-        , order_type
-        , sale_channel_key
-        , date_at
+WITH
+fact_sales_order_union AS (
+SELECT 
+  date_key,
+  customer_key,
+  original_code,
+  product_key,
+  sale_channel_key,
+  order_type,
+  platform_key,
+  merchant_key
   FROM `tiki-dwh.dwh.fact_sales_order_nmv` 
-), 
+UNION ALL
 
-raw_act AS (
-SELECT * EXCEPT(preceeding_order_date_at, preceeding_order,rank_first_order,date_at,order_code) 
-      ,MAX(IF(rank_first_order=1,order_code,'')) OVER (PARTITION BY customer_id) AS first_order_code
-      ,IF(rank_first_order=1,1,0) AS is_activation
-      ,IF(rank_first_order=1,0,DATE_DIFF(date_key,DATE(preceeding_order_date_at), DAY)) AS num_of_datediff
-      ,IF(DATE_DIFF(date_key,DATE(preceeding_order_date_at),DAY) >= 8, 1,0) is_7days_reactivation
-      ,IF(DATE_DIFF(date_key,DATE(preceeding_order_date_at),DAY) >= 31, 1,0) is_30days_reactivation
-      ,IF(DATE_DIFF(date_key,DATE(preceeding_order_date_at),DAY) >= 91, 1,0) is_90days_reactivation
-      ,IF(DATE_DIFF(date_key,DATE(preceeding_order_date_at),DAY) >= 366, 1,0) is_365days_reactivation
-      ,order_code
-  FROM 
-      (
-        SELECT
-              date_key
-              ,date_at
-              ,customer_key AS customer_id 
-              ,order_code
-              ,original_code
-              ,ROW_NUMBER() OVER (PARTITION BY customer_key ORDER BY date_key, date_at) AS rank_first_order
-              ,LAG(order_code) OVER (PARTITION BY customer_key ORDER BY date_key, date_at) AS preceeding_order
-              ,LAG(date_at) OVER (PARTITION BY customer_key ORDER BY date_key, date_at ) AS preceeding_order_date_at
-        FROM  fact_sales_order_all
-        WHERE sale_channel_key = 2
-        AND order_type = 1
-       ) 
+SELECT
+  date_key,
+  customer_key,
+  original_code,
+  product_key,
+  sale_channel_key,
+  order_type,
+  platform_key,
+  merchant_key
+  FROM `tiki-dwh.dwh.fact_sales_order_nmv_2017` 
 )
 
-, activation 
-AS 
-(
-  SELECT distinct customer_id, original_code
-  FROM raw_act
-  WHERE is_activation = 1 
-AND date_key >= DATE_SUB(DATE_TRUNC(DATE_SUB(CURRENT_DATE('+7'),INTERVAL 1 DAY),MONTH),INTERVAL 1 MONTH)
-)
-
+, fact_sales_order AS ( 
+	SELECT DISTINCT
+    date_key,
+    customer_key AS customer_id ,
+    original_code 
+  FROM fact_sales_order_union
+  WHERE 1=1
+    AND sale_channel_key = 2
+    AND order_type = 1
+    AND (platform_key != 13 or platform_key is null)
+    AND merchant_key not in (26,24,7,25,8,14)
+    ),
+	
+temp AS(
+	SELECT 
+		fso.*,
+		ROW_NUMBER() over (PARTITION BY customer_id ORDER BY date_key) AS rn
+	FROM fact_sales_order  fso
+	),
+	
+activation AS(
+	SELECT x
+		customer_id,
+        original_code,
+		date_key AS date,
+    SUBSTR(FORMAT_DATE('%Y%m%d',date_key),1,6) AS month,
+    CAST(1 AS INT64) AS act,
+    EXTRACT(ISOWEEK FROM date_key) AS week
+	FROM temp
+	WHERE rn=1)
 #note: above this line is to define activation
 
 #Part_2
@@ -145,32 +142,19 @@ SELECT
   END cancelled_discount,
   CASE WHEN order_type = 3 THEN discount_VND ELSE 0 
   END rma_discount
-  
   FROM(
-    select * from `tiki-dwh.dwh.fact_marketing_revenue_v3_2020`
-    union all
     select * from `tiki-dwh.dwh.fact_marketing_revenue_v3_2019`
+    union all
+    select * from `tiki-dwh.dwh.fact_marketing_revenue_v3_2018`
   )
   
   WHERE 2=2
 		AND sale_channel_key = 2
 #Define Facebook here    
-    AND channel_name LIKE '%facebook%'
+    AND partner = 'FB'
     AND (platform_key != 13 or platform_key IS NULL)
     AND merchant_key NOT IN (26,24,7,25,8,14)
-	AND date_key >= DATE_SUB(DATE_TRUNC(DATE_SUB(CURRENT_DATE('+7'),INTERVAL 1 DAY),MONTH),INTERVAL 1 MONTH)
-),
-#Part_2.1
-session AS (
-SELECT 
-      date,
-      source, 
-      medium, 
-      campaign, 
-      session
-FROM `tiki-dwh.dwh.fact_ga_session_2019*`
-WHERE source LIKE '%facebook%'
-AND _TABLE_SUFFIX  >= format_date('%m%d', DATE_TRUNC(date_sub(CURRENT_DATE('+7'),interval 1 month),month))
+		AND date_key >= DATE_SUB(DATE_TRUNC(DATE_SUB(CURRENT_DATE('+7'),INTERVAL 1 DAY),MONTH),INTERVAL 1 MONTH)
 ),
 
 union_cmv AS (
@@ -184,12 +168,15 @@ SUM(confirmed_value - confirmed_discount + confirmed_discount_tikixu + confirmed
     - cancelled_value+ cancelled_discount - cancelled_discount_tikixu - cancelled_shipping_fee + cancelled_shipping_discount_value - cancelled_handling_fee
     - rma_val - rma_discount_tikixu + rma_shipping_discount_value - rma_shipping_fee - rma_handling_fee) as nmv,
 SUM(confirmed_value + confirmed_shipping_fee + confirmed_handling_fee) AS cmv,
-SUM(confirmed_qty- cancelled_qty - rma_qty) as net_qty,
-a.customer_id AS customer_id
+SUM(confirmed_qty- cancelled_qty- rma_qty) as net_qty,
+,SUM(a.act)/COUNT(original_code)
 FROM raw d
 LEFT JOIN `tiki-dwh.dwh.dim_product_full` dp on d.product_id = dp.product_key
 LEFT JOIN activation a ON d.original_code = a.original_code
-GROUP BY 1,2,3,4,5,9
+WHERE 1=1
+  AND PARSE_DATE('%Y%m%d',CAST(d.date AS STRING)) >= 
+      DATE_SUB(DATE_TRUNC(DATE_SUB(CURRENT_DATE('+7'), INTERVAL 1 DAY), YEAR), INTERVAL 1 YEAR)
+GROUP BY 1,2,3,4,5
 )
 #note: above this line is to define cmv-nmv-order
 
@@ -209,32 +196,31 @@ ad_id,
 sum(spend) as spend,
 sum(unique_clicks) as unique_clicks,
 sum(impressions) as impressions
-FROM `tikivn-175510.ecom.fact_mkt_cost_facebook_*`
-WHERE _TABLE_SUFFIX  >= format_date('%Y%m%d', DATE_TRUNC(date_sub(CURRENT_DATE('+7'),interval 1 month),month))
+FROM `tikivn-175510.ecom.fact_mkt_cost_facebook_2019*`
+WHERE _TABLE_SUFFIX  >= format_date('%m%d', DATE_TRUNC(date_sub(CURRENT_DATE('+7'),interval 1 month),month))
 GROUP BY 1,2,3,4,5,6,7,8,9 
 )
 
 #Final_Run
-,cost_and_cmv 
-  AS (
+,cost_and_cmv AS (
   SELECT 
         date,
         CAST(NULL AS STRING) AS account_name, 
         CAST(NULL AS STRING) AS adset_name, 
         CAST(NULL AS STRING) AS ad_name, 
-        CAST(NULL AS STRING) AS campaign_name,
+        CAST(NULL AS STRING) AS campaign_name, 
         campaign,
         ad_id,
         source,
         medium,
         SUM(cmv) as cmv, 
-        SUM(nmv) as nmv,
-        COUNT(DISTINCT customer_id) AS act,
+        SUM(nmv) as nmv, 
+        SUM(act) AS act,
         SUM(net_qty) AS net_qty,
         CAST(NULL AS FLOAT64) AS spend, 
         CAST(NULL AS INT64) AS unique_clicks,
         CAST(NULL AS INT64) AS impressions 
-  FROM union_cmv 
+  FROM union_cmv
   GROUP BY 1,2,3,4,5,6,7,8,9
   UNION ALL 
   SELECT 
@@ -248,16 +234,14 @@ GROUP BY 1,2,3,4,5,6,7,8,9
         CAST(NULL AS STRING) AS source, 
         CAST(NULL AS STRING) AS medium, 
         CAST(NULL AS FLOAT64) AS cmv, 
-        CAST(NULL AS FLOAT64) AS nmv,
+        CAST(NULL AS FLOAT64) AS nmv, 
         CAST(NULL AS INT64) AS act,
         CAST(NULL AS INT64) AS net_qty,
         spend, 
         unique_clicks,
         impressions
   FROM cost
-  WHERE spend > 0
-) 
-
+)
 , get_campaign_name AS
 (
     SELECT * EXCEPT(rank_adname) 
@@ -271,9 +255,10 @@ GROUP BY 1,2,3,4,5,6,7,8,9
                 RANK() OVER (PARTITION BY ad_id ORDER BY plus DESC) AS rank_get_name
           FROM (
                 SELECT DISTINCT 
-                       ad_id
+                        campaign
+                       ,ad_id
                        ,CASE 
-                            WHEN ad_name LIKE 'DIS%' OR ad_name LIKE 'BRC%' THEN ad_name
+                            WHEN ad_name LIKE 'DIS%' THEN ad_name
                             WHEN ad_name NOT LIKE 'DIS%' AND campaign LIKE 'DIS%' THEN campaign
                             WHEN account_name LIKE 'App' AND Upper(campaign_name) LIKE '%ANDROID%' THEN 'DIS_APP_FB_ALL_ALL_ALL_ALL_ALL_AND_UNK'
                             WHEN account_name LIKE 'App' AND Upper(campaign_name) LIKE '%IOS%' THEN 'DIS_APP_FB_ALL_ALL_ALL_ALL_ALL_IOS_UNK'
@@ -283,6 +268,8 @@ GROUP BY 1,2,3,4,5,6,7,8,9
                        ,account_name
                        ,campaign_name
                        ,adset_name
+                       ,source
+                       ,medium
                        ,IF(account_name IS NULL, 0, 1) AS plus
                  FROM  cost_and_cmv                        
                 )
@@ -291,17 +278,19 @@ GROUP BY 1,2,3,4,5,6,7,8,9
       ) WHERE rank_adname = 1
 )
 
+minh_nhong_nheo AS
+(
 SELECT 
       t1.date,
-      CAST(NULL AS INT64) AS session_c,
+      FORMAT_DATE("%D", t1.date) as e_date,
       FORMAT_DATE("%V", t1.date) as week,
       FORMAT_DATE("%m", t1.date) as month,
-      FORMAT_DATE("%Y", t1.date) as year,
+      FORMAT_DATE("%G", t1.date) as year,
       t2.account_name, 
       t2.adset_name, 
       t2.ad_name, 
       t2.campaign_name, 
-      t1.campaign, 
+      t2.campaign, 
       t2.ad_id, 
       t1.source, 
       t1.medium, 
@@ -312,82 +301,27 @@ SELECT
       SUM(spend) as spend, 
       SUM(unique_clicks) as unique_clicks,
       SUM(impressions) as impressions,
-      CASE WHEN SPLIT(t2.ad_name, '_')[SAFE_OFFSET(2)] = 'FB'
-      THEN SPLIT(t2.ad_name, '_')[SAFE_OFFSET(1)]
-      ELSE SPLIT(t1.campaign, '_')[SAFE_OFFSET(1)]
-      END AS spend_strategy,
-      CASE WHEN SPLIT(t2.ad_name, '_')[SAFE_OFFSET(2)] = 'FB'
-      THEN SPLIT(t2.ad_name, '_')[SAFE_OFFSET(3)]
-      ELSE SPLIT(t1.campaign, '_')[SAFE_OFFSET(3)]
-      END AS ad_type,
-      CASE WHEN SPLIT(t2.ad_name, '_')[SAFE_OFFSET(2)] = 'FB'
-      THEN SPLIT(t2.ad_name, '_')[SAFE_OFFSET(4)]
-      ELSE SPLIT(t1.campaign, '_')[SAFE_OFFSET(4)] 
-      END AS campaign_type,
-      CASE WHEN SPLIT(t2.ad_name, '_')[SAFE_OFFSET(2)] = 'FB'
-      THEN SPLIT(t2.ad_name, '_')[SAFE_OFFSET(7)]
-      ELSE SPLIT(t1.campaign, '_')[SAFE_OFFSET(7)]
-      END AS category,
-      CASE WHEN SPLIT(t2.ad_name, '_')[SAFE_OFFSET(2)] = 'FB'
-      THEN SPLIT(t2.ad_name, '_')[SAFE_OFFSET(10)]
-      ELSE SPLIT(t1.campaign, '_')[SAFE_OFFSET(10)]
-      END AS camp_name,
-      CASE WHEN SPLIT(t2.ad_name, '_')[SAFE_OFFSET(2)] = 'FB'
-      THEN SPLIT(t2.ad_name, '_')[SAFE_OFFSET(11)] 
-      ELSE SPLIT(t1.campaign, '_')[SAFE_OFFSET(11)]
-      END AS camp_code,
-      CASE WHEN SPLIT(t2.ad_name, '_')[SAFE_OFFSET(2)] = 'FB'
-      THEN SPLIT(t2.ad_name, '_')[SAFE_OFFSET(12)] 
-      ELSE SPLIT(t1.campaign, '_')[SAFE_OFFSET(12)] 
-      END AS Audience_list,
-      CASE WHEN SPLIT(t2.ad_name, '_')[SAFE_OFFSET(2)] = 'FB'
-      THEN SPLIT(t2.ad_name, '_')[SAFE_OFFSET(13)]
-      ELSE SPLIT(t1.campaign, '_')[SAFE_OFFSET(13)] 
-      END AS Time_retention,
-      CASE WHEN SPLIT(t2.ad_name, '_')[SAFE_OFFSET(2)] = 'FB'
-      THEN SPLIT(t2.ad_name, '_')[SAFE_OFFSET(14)] 
-      ELSE SPLIT(t1.campaign, '_')[SAFE_OFFSET(14)] 
-      END AS Gender,
-      CASE WHEN SPLIT(t2.ad_name, '_')[SAFE_OFFSET(2)] = 'FB'
-      THEN SPLIT(t2.ad_name, '_')[SAFE_OFFSET(15)] 
-      ELSE SPLIT(t1.campaign, '_')[SAFE_OFFSET(15)] 
-      END AS Age,
-      CASE WHEN SPLIT(t2.ad_name, '_')[SAFE_OFFSET(2)] = 'FB'
-      THEN SPLIT(t2.ad_name, '_')[SAFE_OFFSET(16)] 
-      ELSE SPLIT(t1.campaign, '_')[SAFE_OFFSET(16)] 
-      END AS Placement,
-      CASE WHEN SPLIT(t2.ad_name, '_')[SAFE_OFFSET(2)] = 'FB'
-      THEN SPLIT(t2.ad_name, '_')[SAFE_OFFSET(17)] 
-      ELSE SPLIT(t1.campaign, '_')[SAFE_OFFSET(17)]
-      END AS Destination,
-      CASE WHEN SPLIT(t2.ad_name, '_')[SAFE_OFFSET(2)] = 'FB'
-      THEN SPLIT(t2.ad_name, '_')[SAFE_OFFSET(18)]
-      ELSE SPLIT(t1.campaign, '_')[SAFE_OFFSET(18)]
-      END AS Banner,
-      CASE WHEN SPLIT(t2.ad_name, '_')[SAFE_OFFSET(2)] = 'FB'
-      THEN SPLIT(t2.ad_name, '_')[SAFE_OFFSET(19)]
-      ELSE SPLIT(t1.campaign, '_')[SAFE_OFFSET(19)]
-      END AS Content,
-      CASE WHEN SPLIT(t2.ad_name, '_')[SAFE_OFFSET(2)] = 'FB'
-      THEN SPLIT(t2.ad_name, '_')[SAFE_OFFSET(20)]
-      ELSE SPLIT(t1.campaign, '_')[SAFE_OFFSET(20)]
-      END AS Optimize,
-      CASE WHEN SPLIT(t2.ad_name, '_')[SAFE_OFFSET(2)] = 'FB'
-      THEN SPLIT(t2.ad_name, '_')[SAFE_OFFSET(21)]
-      ELSE SPLIT(t1.campaign, '_')[SAFE_OFFSET(21)]
-      END AS Bidding_event,
-      CASE WHEN SPLIT(t2.ad_name, '_')[SAFE_OFFSET(2)] = 'FB'
-      THEN SPLIT(t2.ad_name, '_')[SAFE_OFFSET(22)]
-      ELSE SPLIT(t1.campaign, '_')[SAFE_OFFSET(22)]
-      END AS Objective,
-      CASE WHEN SPLIT(t2.ad_name, '_')[SAFE_OFFSET(2)] = 'FB'
-      THEN SPLIT(t2.ad_name, '_')[SAFE_OFFSET(23)]
-      ELSE SPLIT(t1.campaign, '_')[SAFE_OFFSET(23)]
-      END AS Cate_level,
-      CASE WHEN SPLIT(t2.ad_name, '_')[SAFE_OFFSET(2)] = 'FB'
-      THEN SPLIT(t2.ad_name, '_')[SAFE_OFFSET(24)]
-      ELSE SPLIT(t1.campaign, '_')[SAFE_OFFSET(24)]
-      END AS Strategy
+      SPLIT(t2.ad_name, '_')[SAFE_OFFSET(1)] spend_strategy,
+      SPLIT(t2.ad_name, '_')[SAFE_OFFSET(3)] ad_type,
+      SPLIT(t2.ad_name, '_')[SAFE_OFFSET(4)] campaign_type,
+      SPLIT(t2.ad_name, '_')[SAFE_OFFSET(7)] category,
+      SPLIT(t2.ad_name, '_')[SAFE_OFFSET(10)] camp_name,
+      SPLIT(t2.ad_name, '_')[SAFE_OFFSET(11)] camp_code,
+      SPLIT(t2.ad_name, '_')[SAFE_OFFSET(12)] Audience_list,
+      SPLIT(t2.ad_name, '_')[SAFE_OFFSET(13)] Time_retention,
+      SPLIT(t2.ad_name, '_')[SAFE_OFFSET(14)] Gender,
+      SPLIT(t2.ad_name, '_')[SAFE_OFFSET(15)] Age,
+      SPLIT(t2.ad_name, '_')[SAFE_OFFSET(16)] Placement,
+      SPLIT(t2.ad_name, '_')[SAFE_OFFSET(17)] Destination,
+      SPLIT(t2.ad_name, '_')[SAFE_OFFSET(18)] Banner,
+      SPLIT(t2.ad_name, '_')[SAFE_OFFSET(19)] Content,
+      SPLIT(t2.ad_name, '_')[SAFE_OFFSET(20)] Optimize,
+      SPLIT(t2.ad_name, '_')[SAFE_OFFSET(21)] Bidding_event,
+      SPLIT(t2.ad_name, '_')[SAFE_OFFSET(22)] Objective,
+      SPLIT(t2.ad_name, '_')[SAFE_OFFSET(23)] Cate_level,
+      SPLIT(t2.ad_name, '_')[SAFE_OFFSET(24)] Strategy
 FROM cost_and_cmv AS t1
-     LEFT JOIN get_campaign_name AS t2 ON t1.ad_id = t2.ad_id
-GROUP BY 1,3,4,5,6,7,8,9,10,11,12,13,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39
+     LEFT JOIN get_campaign_name AS t2
+     ON t1.ad_id = t2.ad_id
+GROUP BY 1,2,3,4,5,6,7,8,9,10,11,12,13,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39
+),

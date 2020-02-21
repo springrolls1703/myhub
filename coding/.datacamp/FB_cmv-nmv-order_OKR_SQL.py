@@ -13,7 +13,6 @@ SELECT
   ga_source                                     AS source,
   ga_medium                                     AS medium,
   ga_campaign_name                              AS campaign,
-  spend_strategy, 
   CASE
     WHEN channel_name = 'zalo' THEN 'referral'
     WHEN channel_name IN ('affiliate ecomobi','affiliate websosanh') THEN 'affiliate others'
@@ -101,20 +100,41 @@ EXTRACT(ISOWEEK FROM PARSE_DATE('%Y%m%d',CAST(d.date AS STRING))) AS week,
 SUBSTR(CAST(d.date AS STRING),1,6) AS month,
 SUBSTR(CAST(d.date AS STRING),1,4) AS year,
 CASE
-    WHEN campaign LIKE '%Google_Search_SEM_Gross_Gross_@NBrand Keyword_@CAll%' 
-      THEN 'Google Brand'
-    WHEN spend_strategy = 'APP'
-      THEN 'Apps'
-    WHEN spend_strategy in ('PNS', 'PRT')
-      THEN 'Partnership'
-    WHEN spend_strategy = 'SPO'
-    THEN 'Sponsored'
-    WHEN spend_strategy = 'YBR'
-      THEN 'Brand'
-    WHEN spend_strategy = 'NBR'
-      THEN 'Nonbrand'
-    ELSE 'Other'
-  END AS strategy,
+  WHEN campaign LIKE '%Google_Search_SEM_Gross_Gross_@NBrand Keyword_@CAll%' 
+  THEN 'Google Brand'
+  
+  WHEN (LOWER(source) LIKE '%tiki.vn%' 
+            OR source LIKE '%product%')
+      AND medium LIKE '%referrer%' 
+  THEN 'Apps'
+  
+  WHEN LOWER(campaign) LIKE '%partnership%' 
+      OR campaign LIKE '%PNS%' 
+  THEN 'Partnership'
+  
+  WHEN campaign LIKE  '%SPO%' 
+  THEN 'Sponsored'
+  
+  WHEN campaign LIKE '%Branding%'
+      OR campaign LIKE '%\\_YBR\\_%'
+      OR campaign LIKE '%UM020718%' 
+      OR campaign LIKE '%Back To School%' 
+      OR campaign LIKE '%UM180701%' 
+      OR campaign LIKE '%GDN\\_B2S%' 
+      OR campaign LIKE '%DCH1808%' 
+      OR campaign LIKE '%UM0%' 
+      OR campaign LIKE '%_BA_%' 
+      OR campaign LIKE '%YTV%' 
+      OR campaign LIKE '%\\_YBA\\_%' 
+      OR campaign LIKE '%Brand Awareness%'
+      OR campaign LIKE '%ENG%' 
+      OR campaign LIKE '%BAW%' 
+      OR campaign LIKE '%REA%' 
+      OR campaign LIKE '%VVI%'
+  THEN 'Brand'
+  
+  ELSE 'Nonbrand' 
+END AS strategy,
 channel,
 high_level_channel_rollup_name,
 CASE
@@ -261,7 +281,6 @@ SELECT
     MAX(date) AS latest_date,
     upper_channel
 FROM data d
-where date < DATE_SUB(CURRENT_DATE('+7'), INTERVAL 1 YEAR)
 GROUP BY 1,2,3,4,9
 )
 
