@@ -8,11 +8,8 @@ $cls - clear the screen
 $code . open code studio
 
 ----git command
-$git clone https://github.com/springrolls1703/myhub {where to clone respitory}
-$git remote -v: list the information
-$git branch -a: list all the branch in respitory
+$git clone https://github.com/springrolls1703/myhub 
 $git add [file] :adding file to commit to branch
 $git status :tell which branch on and if there are file ready to commit
 $git commit -m '{message}'
 $git log :know what commit command has been done
-aaaa

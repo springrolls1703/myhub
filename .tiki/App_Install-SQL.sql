@@ -1,257 +1,304 @@
-#standardSQL
-with 
-purchase_data as(
-SELECT 
-  distinct
-  PARSE_DATE('%Y-%m-%d',FORMAT_DATETIME('%Y-%m-%d',PARSE_DATETIME('%Y%m%d',install_time))) AS install_time,
-  PARSE_DATE('%Y-%m-%d',FORMAT_DATETIME('%Y-%m-%d',PARSE_DATETIME('%Y%m%d',purchase_time))) AS date,
-  campaign,
-  device_id,
-  order_code as original_order
-FROM `tiki-dwh.appsflyer.purchase_event_2*`
-where is_retargeting = 'false'
-and device_id is not null
-and _table_suffix >= '0190301'
-and lower(campaign) like '%app\\_%'
-and PARSE_DATE('%Y-%m-%d',FORMAT_DATETIME('%Y-%m-%d',PARSE_DATETIME('%Y%m%d',purchase_time))) <= 
-DATE_ADD(PARSE_DATE('%Y-%m-%d',FORMAT_DATETIME('%Y-%m-%d',PARSE_DATETIME('%Y%m%d',install_time))), INTERVAL 3 DAY) 
-),
-
-fact_sale_order as(
-select
-  date_key,
+#StandardSQL
+--_02_mkt_new_nmv_okr
+WITH data1 AS (
+SELECT
+  CAST(FORMAT_DATE('%Y%m%d',date_key) AS INT64) AS date,
+  original_code ,
   order_code,
-  original_code,
-  order_type,
-  customer_key,
-  value,
-  discount,
-  discount_tikixu,
-  shipping_value,
-  shipping_discount_value,
-  handling_fee
-from `tiki-dwh.dwh.fact_sales_order_nmv`
-left join `tiki-dwh.dwh.dim_sale_channel` using (sale_channel_key)
-where sale_channel = 'ONLINE'
-and date_key >= '2019-03-01'
+  sale_channel ,
+  platform_name                                 AS platform,
+  merchant_id ,
+  seller_key                                    AS seller_id,
+  product_key                                   AS product_id,
+  ga_source                                     AS source,
+  ga_medium                                     AS medium,
+  ga_campaign_name                              AS campaign,
+  spend_strategy, 
+  CASE
+    WHEN channel_name = 'zalo' THEN 'referral'
+    WHEN channel_name IN ('affiliate ecomobi','affiliate websosanh') THEN 'affiliate others'
+    WHEN channel_name LIKE 'ldn%' AND channel_name <> 'ldn chin' THEN 'ldn others'
+    WHEN channel_name IN ('possible internal links') THEN 'others'
+    ELSE channel_name
+  END AS channel,
+  high_level_channel_rollup_name,
+  CASE
+    WHEN channel_name = 'google' THEN SPLIT(campaign_key,'_')[SAFE_OFFSET(0)]
+    ELSE campaign_key
+  END AS campaign_id,
+  CASE
+    WHEN channel_name = 'google' THEN SPLIT(campaign_key,'_')[SAFE_OFFSET(1)]
+    ELSE campaign_key
+  END AS adgroup_id,
+  CASE WHEN order_type = 1 THEN value_VND ELSE 0 
+  END confirmed_value,
+  CASE WHEN order_type = 2 THEN value_VND ELSE 0 
+  END cancelled_value,
+  CASE WHEN order_type = 3 THEN value_VND ELSE 0 
+  END rma_val,
+  
+  CASE WHEN order_type = 1 THEN discount_tikixu_VND ELSE 0 
+  END confirmed_discount_tikixu,
+  CASE WHEN order_type = 2 THEN discount_tikixu_VND ELSE 0 
+  END cancelled_discount_tikixu,
+  CASE WHEN order_type = 3 THEN discount_tikixu_VND ELSE 0 
+  END rma_discount_tikixu,
+  
+  CASE WHEN order_type = 1 THEN shipping_value_VND ELSE 0 
+  END confirmed_shipping_fee,
+  CASE WHEN order_type = 2 THEN shipping_value_VND ELSE 0 
+  END cancelled_shipping_fee,
+  CASE WHEN order_type = 3 THEN shipping_value_VND ELSE 0 
+  END rma_shipping_fee,
+  
+  CASE WHEN order_type = 1 THEN shipping_discount_value_VND ELSE 0 
+  END confirmed_shipping_discount_value,
+  CASE WHEN order_type = 2 THEN shipping_discount_value_VND ELSE 0 
+  END cancelled_shipping_discount_value,
+  CASE WHEN order_type = 3 THEN shipping_discount_value_VND ELSE 0 
+  END rma_shipping_discount_value,
+  
+  CASE WHEN order_type = 1 THEN handling_fee_VND ELSE 0 
+  END confirmed_handling_fee,
+  CASE WHEN order_type = 2 THEN handling_fee_VND ELSE 0 
+  END cancelled_handling_fee,
+  CASE WHEN order_type = 3 THEN handling_fee_VND ELSE 0 
+  END rma_handling_fee,
+  
+  CASE WHEN order_type = 1 THEN qty ELSE 0 
+  END confirmed_qty,
+  CASE WHEN order_type = 2 THEN qty ELSE 0 
+  END cancelled_qty,
+  CASE WHEN order_type = 3 THEN qty ELSE 0 
+  END rma_qty,
+  
+  CASE WHEN order_type = 1 THEN discount_VND ELSE 0 
+  END confirmed_discount,
+  CASE WHEN order_type = 2 THEN discount_VND ELSE 0 
+  END cancelled_discount,
+  CASE WHEN order_type = 3 THEN discount_VND ELSE 0 
+  END rma_discount
+  FROM(
+    select * from `tiki-dwh.dwh.fact_marketing_revenue_v3_2019`
+    union all
+    select * from `tiki-dwh.dwh.fact_marketing_revenue_v3_2018`
+  )
+  
+  WHERE 2=2
+		AND sale_channel_key = 2
+    AND (platform_key != 13 or platform_key IS NULL)
+    AND merchant_key NOT IN (26,24,7,25,8,14)
+		AND date_key >= DATE_SUB(DATE_TRUNC(DATE_SUB(CURRENT_DATE('+7'),INTERVAL 1 DAY),YEAR),INTERVAL 1 YEAR)
+		AND (date_key <= DATE_SUB(DATE_SUB(CURRENT_DATE('+7'),INTERVAL 1 DAY), INTERVAL 1 YEAR)
+						OR date_key >= DATE_SUB(DATE_TRUNC(DATE_SUB(CURRENT_DATE('+7'), INTERVAL 1 DAY), MONTH), INTERVAL 14 MONTH) 
+						OR date_key >= DATE_TRUNC(DATE_SUB(CURRENT_DATE('+7'), INTERVAL 1 DAY), YEAR))
 ),
 
-data_sale as (
-select
-  date_key,
-  original_code,
-  customer_key,
-  SUM(CASE 
-          WHEN order_type = 1 THEN IFNULL(value, 0) + IFNULL(shipping_value, 0) + IFNULL(handling_fee, 0)
-          ELSE 0
-      END) as cmv,
-  SUM(CASE 
-        WHEN order_type = 1 THEN IFNULL(value, 0) - (IFNULL(discount, 0) - IFNULL(discount_tikixu, 0)) + (IFNULL(shipping_value, 0) - IFNULL(shipping_discount_value, 0)) + IFNULL(handling_fee, 0)
-        ELSE - (IFNULL(value, 0) - (IFNULL(discount, 0) - IFNULL(discount_tikixu, 0)) + (IFNULL(shipping_value, 0) - IFNULL(shipping_discount_value, 0)) + IFNULL(handling_fee, 0))
-      END) as nmv
-from fact_sale_order
-group by 1,2,3
-),
-
-activation_data as (
-  select
-    *
-  from 
-    ( select 
-        *,
-        row_number() over (partition by order_code) as rn
-      FROM `tiki-dwh.fna.fna_customer_activation_*`
-      where _table_suffix >= '20190301'
-    )
-  where rn = 1
-),
-
-activation_raw as(
-select distinct
-  pd.original_order,
-  a.customer_id
-from purchase_data pd
-join activation_data a on pd.original_order = a.order_code
-),
-
-criteocost AS (
+raw AS (
 SELECT 
-'Criteo' AS new_channel,
-CAST(FORMAT_DATE('%Y%m%d', PARSE_DATE("%y%m%d",_TABLE_SUFFIX)) AS INT64) AS date_key,
-campaign_key as campaign,
-       CASE
-        WHEN campaign_key LIKE '%DIS_APP_%' THEN 'Apps'
-        ELSE 'Others'
-       END AS vertical,
-Cost_USD as Cost
-FROM `tiki-dwh.dwh.fact_campaign_criteo_rtb_20*`
-WHERE _TABLE_SUFFIX >= '190301'
-),
-
-
-ggcost AS (
-SELECT
-    'Google' AS new_channel,
-    CAST(FORMAT_DATE('%Y%m%d', c.Date) AS INT64) AS date_key,
-    c.CampaignName as campaign,
-    CASE
-    WHEN c. CampaignName LIKE '%UAC\\_App%' OR c. CampaignName LIKE '%App\\_UAC%' OR c. CampaignName LIKE '%APP%' THEN 'Apps'
-    ELSE 'Others'
-    END AS vertical,
-    CAST(ROUND(SUM(cs.Cost/ 1000000), 0) AS INT64) AS Cost 
-  FROM (
-  SELECT 
-    CampaignName , 
-    CampaignId , 
-    DATE(_PARTITIONTIME, '+7') AS Date 
-    FROM `tikivn-175510.adwords.p_Campaign_*`
-    WHERE _TABLE_SUFFIX != '6647354050'
-    ) c
-  LEFT JOIN (
-    SELECT 
-      CampaignId, 
-      Date, 
-      Cost 
-      FROM `tikivn-175510.adwords.p_CampaignBasicStats_*`
-      WHERE _TABLE_SUFFIX != '6647354050'
-    ) cs
-  ON
-    (c.CampaignId = cs.CampaignId AND c.Date = cs.Date )
-  WHERE FORMAT_DATE('%Y%m%d', c.Date) >= '20190301'
-    AND FORMAT_DATE('%Y%m%d', c.Date) <= 
-        FORMAT_DATE('%Y%m%d',DATE_SUB(CURRENT_DATE('+7'), INTERVAL 1 DAY))
-  GROUP BY 1,2,3,4
-),
-
-fbcost AS (
-SELECT 'Facebook' AS new_channel,
-       date_key,
-       campaign_name as campaign,
-       CASE
-        WHEN account_name LIKE '%App%' OR campaign_name LIKE '%\\_App%' THEN 'Apps'
-        ELSE 'Others'
-       END AS vertical, 
-       ROUND(SUM(spend*1.054), 0) AS Cost 
-FROM `tikivn-175510.ecom.fact_mkt_cost_facebook_2*` 
-WHERE _TABLE_SUFFIX >= '0190301'
-  AND _TABLE_SUFFIX <= SUBSTR(FORMAT_DATE('%Y%m%d',DATE_SUB(CURRENT_DATE('+7'), INTERVAL 1 DAY)),2,7)
-GROUP BY 1,2,3,4
-), 
-
-temp as (
-SELECT *,PARSE_DATE("%Y%m%d", CAST(date_key as string)) as date FROM ggcost 
-WHERE vertical = 'Apps'
-UNION ALL
-SELECT *,PARSE_DATE("%Y%m%d", CAST(date_key as string)) as date FROM fbcost
-WHERE vertical = 'Apps'
-UNION ALL
-SELECT *,PARSE_DATE("%Y%m%d", CAST(date_key as string)) as date FROM criteocost
-WHERE vertical = 'Apps'
-),
-
-raw as (
-select 
-  pd.*,
-  cmv,
-  nmv,
-  a.customer_id,
-  customer_key
-from purchase_data pd
-left join data_sale d on pd.original_order = d.original_code
-left join activation_raw a on pd.original_order = a.original_order
-),
-
-install_data 
-as(
-SELECT
-date_key,
-campaign,
-COUNT(distinct device_id) as install FROM(
-SELECT
-  PARSE_DATE("%Y%m%d",format_timestamp('%Y%m%d', install_time)) as date_key,
-  campaign,
-  Case
-    when android_id != 'null' then android_id
-    when advertising_id != 'null' then advertising_id
-    when idfa != 'null' then idfa
-    when idfv != 'null' then idfv
-  end as device_id
-FROM `tiki-dwh.appsflyer.installs_2*`
-where lower(campaign) like "%app\\_%"
-and _table_suffix >= '0190301'
-)
-group by 1,2
-),
-
-cmv_side AS (
-select
-  pd.date,
-  pd.campaign,
-  count(distinct original_order) as num_order,
-  sum(cmv) as cmv,
-  sum(nmv) as nmv,
-  count(distinct customer_id) as act,
-  count(distinct customer_key) as num_customer
-FROM raw pd
-WHERE pd.date >= DATE_TRUNC(DATE_SUB(CURRENT_DATE("+7"), INTERVAL 30 DAY), MONTH)
-group by 1,2
-)
-, 
-g AS (SELECT
-  pd.date,
-  SPLIT(pd.campaign, '_')[SAFE_OFFSET(2)] as channel,
-  CAST (NULL AS float64) AS Cost,
-  pd.campaign,
-  pd.num_order,
-  pd.cmv,
-  pd.nmv,
-  pd.act,
-  pd.num_customer,
-  CAST (NULL AS int64) AS install
-FROM cmv_side pd
-WHERE num_order IS NOT NULL OR cmv IS NOT NULL OR nmv IS NOT NULL OR act IS NOT NULL
-UNION ALL
-SELECT
-  date,
-  SPLIT(campaign, '_')[SAFE_OFFSET(2)] as channel,
-  Cost,
-  campaign,
-  CAST (NULL as int64) as num_order,
-  CAST (NULL as float64) as cmv,
-  CAST (NULL as float64) as nmv,
-  CAST (NULL as float64) as act,
-  CAST (NULL as int64) as num_customer,
-  CAST (NULL AS int64) AS install
-FROM temp 
-WHERE cost is NOT NULL
-UNION ALL
-SELECT
-  date_key as date,
-  SPLIT(campaign, '_')[SAFE_OFFSET(2)] as channel,
-  CAST (NULL AS float64) AS Cost,
-  campaign,
-  CAST (NULL as int64) as num_order,
-  CAST (NULL as float64) as cmv,
-  CAST (NULL as float64) as nmv,
-  CAST (NULL as float64) as act,
-  CAST (NULL as int64) as num_customer,
-  install
-FROM install_data
-WHERE install IS NOT NULL
-)
-
-SELECT
-date,
+PARSE_DATE('%Y%m%d',CAST(d.date AS STRING)) AS date,
+EXTRACT(ISOWEEK FROM PARSE_DATE('%Y%m%d',CAST(d.date AS STRING))) AS week,
+SUBSTR(CAST(d.date AS STRING),1,6) AS month,
+SUBSTR(CAST(d.date AS STRING),1,4) AS year,
+CASE
+    WHEN campaign LIKE '%Google_Search_SEM_Gross_Gross_@NBrand Keyword_@CAll%' 
+      THEN 'Google Brand'
+    WHEN spend_strategy = 'APP'
+      THEN 'Apps'
+    WHEN spend_strategy in ('PNS', 'PRT')
+      THEN 'Partnership'
+    WHEN spend_strategy = 'SPO'
+    THEN 'Sponsored'
+    WHEN spend_strategy = 'YBR'
+      THEN 'Brand'
+    WHEN spend_strategy = 'NBR'
+      THEN 'Nonbrand'
+    ELSE 'Other'
+  END AS strategy,
 channel,
-sum(cost) as cost,
-campaign,
-sum(num_order) as num_order,
-sum(cmv) as cmv,
-sum(nmv) as nmv,
-sum(act) as act,
-sum(num_customer) - sum(act) as retention,
-sum(install) as install
-FROM g
-WHERE date >= DATE_TRUNC(DATE_SUB(CURRENT_DATE("+7"), INTERVAL 30 DAY), MONTH)
-GROUP BY 1,2,4
-order by 1 DESC
+high_level_channel_rollup_name,
+CASE
+WHEN dp.merchant_english_name IS NULL THEN 'Other'
+ELSE dp.merchant_english_name END AS merchant_name,
+SUM(confirmed_value - confirmed_discount + confirmed_discount_tikixu + confirmed_shipping_fee - confirmed_shipping_discount_value + confirmed_handling_fee 
+    - cancelled_value+ cancelled_discount - cancelled_discount_tikixu - cancelled_shipping_fee + cancelled_shipping_discount_value - cancelled_handling_fee
+    - rma_val - rma_discount_tikixu + rma_shipping_discount_value - rma_shipping_fee - rma_handling_fee) as nmv,
+SUM(confirmed_value + confirmed_shipping_fee + confirmed_handling_fee) AS cmv,
+SUM(confirmed_qty- cancelled_qty- rma_qty) as net_qty
+FROM data1 d
+LEFT JOIN `tiki-dwh.dwh.dim_product_full` dp on d.product_id = dp.product_key
+WHERE 1=1
+  AND PARSE_DATE('%Y%m%d',CAST(d.date AS STRING)) >= 
+      DATE_SUB(DATE_TRUNC(DATE_SUB(CURRENT_DATE('+7'), INTERVAL 1 DAY), YEAR), INTERVAL 1 YEAR)
+GROUP BY 1,2,3,4,5,6,7,8
+)
+
+, data AS (
+    SELECT
+        date,
+        week,
+        month,
+        year,
+        strategy,
+        channel,
+        high_level_channel_rollup_name AS upper_channel,
+        merchant_name,
+        nmv,
+        cmv,
+        net_qty
+        FROM raw
+)
+
+, day AS(
+SELECT
+    CASE
+    WHEN date = DATE_SUB(CURRENT_DATE('+7'),INTERVAL 1 day)  THEN 'D-1'
+    WHEN date = DATE_SUB(CURRENT_DATE('+7'),INTERVAL 2 day)  THEN 'D-2'
+    WHEN date = DATE_SUB(CURRENT_DATE('+7'),INTERVAL 3 day)  THEN 'D-3'
+    WHEN date = DATE_SUB(CURRENT_DATE('+7'),INTERVAL 4 day)  THEN 'D-4'
+    WHEN date = DATE_SUB(CURRENT_DATE('+7'),INTERVAL 5 day)  THEN 'D-5'
+    WHEN date = DATE_SUB(CURRENT_DATE('+7'),INTERVAL 6 day)  THEN 'D-6'
+    WHEN date = DATE_SUB(CURRENT_DATE('+7'),INTERVAL 7 day)  THEN 'D-7'
+    WHEN date = DATE_SUB(CURRENT_DATE('+7'),INTERVAL 8 day)  THEN 'D-8'
+    WHEN date = DATE_SUB(CURRENT_DATE('+7'),INTERVAL 9 day)  THEN 'D-9'
+    WHEN date = DATE_SUB(CURRENT_DATE('+7'),INTERVAL 10 day) THEN 'D-10'
+    END AS time,
+    d.strategy,
+    d.channel,
+    d.merchant_name,
+    SUM(nmv) AS nmv,
+    SUM(cmv) AS cmv,
+    SUM(net_qty) AS net_qty,
+    MAX(date) AS latest_date,
+    upper_channel
+FROM data d
+GROUP BY 1,2,3,4,9
+)
+
+, week AS(
+SELECT
+    CASE
+    WHEN week = EXTRACT(ISOWEEK FROM DATE_SUB(CURRENT_DATE('+7'),INTERVAL 0 DAY))  THEN 'WTD'
+    WHEN week = EXTRACT(ISOWEEK FROM DATE_SUB(CURRENT_DATE('+7'),INTERVAL 7 DAY))  THEN 'W-1'
+    WHEN week = EXTRACT(ISOWEEK FROM DATE_SUB(CURRENT_DATE('+7'),INTERVAL 14 DAY)) THEN 'W-2'
+    WHEN week = EXTRACT(ISOWEEK FROM DATE_SUB(CURRENT_DATE('+7'),INTERVAL 21 DAY)) THEN 'W-3'
+    WHEN week = EXTRACT(ISOWEEK FROM DATE_SUB(CURRENT_DATE('+7'),INTERVAL 28 DAY)) THEN 'W-4'
+    WHEN week = EXTRACT(ISOWEEK FROM DATE_SUB(CURRENT_DATE('+7'),INTERVAL 35 DAY)) THEN 'W-5'
+    END AS time,
+    d.strategy,
+    d.channel,
+    d.merchant_name,
+    SUM(nmv) AS nmv,
+    SUM(cmv) AS cmv,
+    SUM(net_qty) AS net_qty,
+    MAX(date) AS latest_date,
+    upper_channel
+FROM data d
+WHERE year = '2019'
+GROUP BY 1,2,3,4,9
+)
+
+
+, month AS(
+SELECT
+    CASE
+    WHEN month = SUBSTR(FORMAT_DATE('%Y%m%d',DATE_SUB(CURRENT_DATE('+7'),INTERVAL 0 DAY)),1,6)                             THEN 'MTD'
+    WHEN month = SUBSTR(FORMAT_DATE('%Y%m%d',DATE_SUB(DATE_SUB(CURRENT_DATE('+7'),INTERVAL 0 DAY), INTERVAL 1 MONTH)),1,6) THEN 'M-1'
+    WHEN month = SUBSTR(FORMAT_DATE('%Y%m%d',DATE_SUB(DATE_SUB(CURRENT_DATE('+7'),INTERVAL 0 DAY), INTERVAL 2 MONTH)),1,6) THEN 'M-2'
+    WHEN month = SUBSTR(FORMAT_DATE('%Y%m%d',DATE_SUB(DATE_SUB(CURRENT_DATE('+7'),INTERVAL 0 DAY), INTERVAL 3 MONTH)),1,6) THEN 'M-3'
+    WHEN month = SUBSTR(FORMAT_DATE('%Y%m%d',DATE_SUB(DATE_SUB(CURRENT_DATE('+7'),INTERVAL 0 DAY), INTERVAL 4 MONTH)),1,6) THEN 'M-4'
+    END AS time,
+    d.strategy,
+    d.channel,
+    d.merchant_name,
+    SUM(nmv) AS nmv,
+    SUM(cmv) AS cmv,
+    SUM(net_qty) AS net_qty,
+    MAX(date) AS latest_date,
+    upper_channel
+FROM data d
+GROUP BY 1,2,3,4,9
+)
+
+, week_ly AS(
+SELECT
+    CASE
+        WHEN week = EXTRACT(ISOWEEK FROM DATE_SUB(DATE_SUB(CURRENT_DATE('+7'),INTERVAL 0 DAY), INTERVAL 1 YEAR))   THEN 'WTD LY'
+        WHEN week = EXTRACT(ISOWEEK FROM DATE_SUB(DATE_SUB(CURRENT_DATE('+7'),INTERVAL 7 DAY), INTERVAL 1 YEAR))   THEN 'W-1 LY'
+        WHEN week = EXTRACT(ISOWEEK FROM DATE_SUB(DATE_SUB(CURRENT_DATE('+7'),INTERVAL 14 DAY), INTERVAL 1 YEAR))  THEN 'W-2 LY'
+        WHEN week = EXTRACT(ISOWEEK FROM DATE_SUB(DATE_SUB(CURRENT_DATE('+7'),INTERVAL 21 DAY), INTERVAL 1 YEAR))  THEN 'W-3 LY'
+        WHEN week = EXTRACT(ISOWEEK FROM DATE_SUB(DATE_SUB(CURRENT_DATE('+7'),INTERVAL 28 DAY), INTERVAL 1 YEAR))  THEN 'W-4 LY'
+        WHEN week = EXTRACT(ISOWEEK FROM DATE_SUB(DATE_SUB(CURRENT_DATE('+7'),INTERVAL 35 DAY), INTERVAL 1 YEAR))  THEN 'W-5 LY'
+    END AS time,
+    d.strategy,
+    d.channel,
+    d.merchant_name,
+    SUM(nmv) AS nmv,
+    SUM(cmv) AS cmv,
+    SUM(net_qty) AS net_qty,
+    MAX(date) AS latest_date,
+    upper_channel
+FROM data d
+WHERE year = '2018'
+GROUP BY 1,2,3,4,9
+)
+
+
+, month_ly AS(
+SELECT
+    CASE
+        WHEN month = SUBSTR(FORMAT_DATE('%Y%m%d',DATE_SUB(CURRENT_DATE('+7'), INTERVAL 1 YEAR)),1,6)                                THEN 'MTD LY'
+        WHEN month = SUBSTR(FORMAT_DATE('%Y%m%d',DATE_SUB(DATE_SUB(CURRENT_DATE('+7'), INTERVAL 1 MONTH), INTERVAL 1 YEAR)),1,6)    THEN 'M-1 LY'
+        WHEN month = SUBSTR(FORMAT_DATE('%Y%m%d',DATE_SUB(DATE_SUB(CURRENT_DATE('+7'), INTERVAL 2 MONTH), INTERVAL 1 YEAR)),1,6)    THEN 'M-2 LY'
+        WHEN month = SUBSTR(FORMAT_DATE('%Y%m%d',DATE_SUB(DATE_SUB(CURRENT_DATE('+7'), INTERVAL 3 MONTH), INTERVAL 1 YEAR)),1,6)    THEN 'M-3 LY'
+    END AS time,
+    d.strategy,
+    d.channel,
+    d.merchant_name,
+    SUM(nmv) AS nmv,
+    SUM(cmv) AS cmv,
+    SUM(net_qty) AS net_qty,
+    MAX(date) AS latest_date,
+    upper_channel
+FROM data d
+where date < DATE_SUB(CURRENT_DATE('+7'), INTERVAL 1 YEAR)
+GROUP BY 1,2,3,4,9
+)
+
+
+, ytd AS(
+SELECT
+    CASE
+      WHEN date >= DATE_SUB(DATE_TRUNC(DATE_SUB(CURRENT_DATE('+7'),INTERVAL 1 DAY),YEAR),INTERVAL 1 YEAR)
+       AND date <= DATE_SUB(DATE_SUB(CURRENT_DATE('+7'),INTERVAL 1 DAY), INTERVAL 1 YEAR)                 
+      THEN 'Y-1 YTD'
+      WHEN date >= DATE_TRUNC(DATE_SUB(CURRENT_DATE('+7'),INTERVAL 1 DAY),YEAR)           
+      THEN 'YTD'
+    END AS time,
+    d.strategy,
+    d.channel,
+    d.merchant_name,
+    SUM(nmv) AS nmv,
+    SUM(cmv) AS cmv,
+    SUM(net_qty) AS net_qty,
+    MAX(date) AS latest_date,
+    upper_channel
+FROM data d
+GROUP BY 1,2,3,4,9
+)
+
+
+SELECT * FROM
+(SELECT * FROM day
+UNION ALL 
+SELECT * FROM week
+UNION ALL 
+SELECT * FROM month
+UNION ALL 
+SELECT * FROM week_ly
+UNION ALL 
+SELECT * FROM month_ly
+UNION ALL 
+SELECT * FROM ytd
+)
+WHERE time IS NOT NULL
