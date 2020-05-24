@@ -45,6 +45,7 @@ $git checkout
 $git push https://github.com/springrolls1703/myhub master
 $git pull https://github.com/springrolls1703/myhub master
 $git reset pull
+
 -----
 
 
@@ -56,3 +57,7 @@ $git pull [project name] [branch name]: git pull myhub master
 $git diff: see the change
 $git show: To view the details of a specific commit
 --git show -r HEAD/HEAD~1/HEAD~2
+$git diff branch_1..branch_2: show the differences between two branches
+$git checkout -b branchname: create a branch
+$git init [projectname]: avoid create a respitory within a respitory this fuck things up
+...
