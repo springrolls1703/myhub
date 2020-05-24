@@ -45,3 +45,47 @@ are linearly related, the points will approximately lie on a line, but not neces
 on the line y = x
 --15.2.2Test for normality: stats.normaltest(x) #test phân phối chuẩn
 --16.1TestSignificance
+----t, pVal = stats.ttest_1samp(data, checkValue) #test p-value với t-test
+--16.2
+----If the data are not normally distributed, the one-sample t-test should not be used. Instead, we must use a nonparametric test on the mean value
+----Wilcoxon signed rank sum test
+----(rank, pVal) = stats.wilcoxon(data-checkValue)
+this function do these step
+1. Calculate the difference between each observation and the value of interest.
+2. Ignoring the signs of the differences, rank them in order of magnitude.
+3. Calculate the sum of the ranks of all the negative (or positive) ranks, corresponding to the observations below (or above) the chosen hypothetical value.
+----paired t-test: comparison of two groups dependent with each other
+----stats.ttest_1samp
+----stats.ttest_rel
+--The basic idea is the same as for the one-sample t-test. But instead of the variance
+of the mean, we now need the variance of the difference between the means of the
+two groups
+----t_statistic, pVal = stats.ttest_ind(group1, group2)
+--classical statistic vs statistical modeling
+import pandas as pd
+import statsmodels.formula.api as sm
+np.random.seed(123)
+df = pd.DataFrame({'Race1': race_1, 'Race2':race_2})
+result = sm.ols(formula='I(Race2-Race1) ~ 1', data=df).fit()
+print(result.summary())
+--Comparision of multiple groups
+----ANOVA (the analysis of variance): o divide the variance into the
+variance between groups, and that within groups, and see if those distributions match
+the null hypothesis that all groups come from the same distribution (Fig. 8.3). The
+variables that distinguish the different groups are often called factors or treatments.
+--DOF (degree of freedom)
+--SS (sum of square)
+--One-way Anova
+The null hypothesis of ANOVAs is that all groups come from the same
+population. A test whether to keep or reject this null hypothesis can be done with
+from scipy import stats
+F_statistic, pVal = stats.f_oneway(group_1, group_2, group_3)
+
+import pandas as pd
+from statsmodels.formula.api import ols
+from statsmodels.stats.anova import anova_lm
+df = pd.DataFrame(data, columns=['value', 'treatment'])
+model = ols('value ~ C(treatment)', df).fit()
+anovaResults = anova_lm(model)
+print(anovaResults)
+--Two-way ANOVA

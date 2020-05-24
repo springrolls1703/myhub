@@ -21,7 +21,7 @@ SELECT
     WHEN channel_name = 'zalo' THEN 'referral'
     WHEN channel_name IN ('affiliate ecomobi','affiliate websosanh') THEN 'affiliate others'
     WHEN channel_name LIKE 'ldn%' AND channel_name <> 'ldn chin' THEN 'ldn others'
-    WHEN channel_name IN ('possible internal links') THEN 'others'
+    WHEN channel_name IN ('possible internal links') THEN 'othchcers'
     ELSE channel_name
   END AS channel,
   high_level_channel_rollup_name AS upper_channel,
