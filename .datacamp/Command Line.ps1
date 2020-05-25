@@ -61,4 +61,4 @@ $git diff branch_1..branch_2: show the differences between two branches
 $git checkout -b branchname: create a branch
 $git init [projectname]: avoid create a respitory within a respitory this fuck things up
 $git remote -v
-ssaasda
+$git checkout filename
