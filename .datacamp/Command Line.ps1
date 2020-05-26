@@ -62,3 +62,4 @@ $git checkout -b branchname: create a branch
 $git init [projectname]: avoid create a respitory within a respitory this fuck things up
 $git remote -v
 $git checkout filename
+$git 
