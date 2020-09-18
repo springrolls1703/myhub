@@ -46,7 +46,7 @@ $git push https://github.com/springrolls1703/myhub master
 $git pull https://github.com/springrolls1703/myhub master
 $git reset pull
 
-ssadasd
+check
 
 -----
 
