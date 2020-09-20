@@ -12,6 +12,9 @@ $leverage: similar to lift but easier to interpret
 -5Computing_Lift
 -6Computing_conviction
 -7Zhangs_metrics
+-8Overview_of_basket_analysis
+-9filtering_support_and_conviction
+-10filtering_convition_and_zhang
 
 
 
@@ -206,3 +209,53 @@ def zhang(antecedent, consequent):
 
 	# Return Zhang's metric
 	return numerator / denominator
+
+# Define an empty list for Zhang's metric
+zhangs_metric = []
+
+# Loop over lists in itemsets
+for itemset in itemsets:
+    # Extract the antecedent and consequent columns
+	antecedent = books[itemset[0]]
+	consequent = books[itemset[1]]
+    
+    # Complete Zhang's metric and append it to the list
+	zhangs_metric.append(zhang(antecedent, consequent))
+    
+# Print results
+rules['zhang'] = zhangs_metric
+print(rules)
+
+-8Overview_of_basket_analysis
+$1Generate_large_set_of_rules
+$2Filter_rules_by_using_metrics
+$3Apply_intuition_and_common_sense
+
+-9filtering_support_and_conviction
+# Preview the rules DataFrame using the .head() method
+print(rules.head())
+
+# Select the subset of rules with antecedent support greater than 0.05
+rules = rules[rules['antecedent support'] > 0.05]
+
+# Select the subset of rules with a consequent support greater than 0.01
+rules = rules[rules['consequent support'] > 0.01]
+
+# Select the subset of rules with a conviction greater than 1.01
+rules = rules[rules['conviction'] > 1.01]
+
+# Print remaining rules
+print(rules)
+
+-10filtering_convition_and_zhang
+# Set the lift threshold to 1.5
+rules = rules[rules['lift'] > 1.5]
+
+# Set the conviction threshold to 1.0
+rules = rules[rules['conviction'] > 1.0]
+
+# Set the threshold for Zhang's rule to 0.65
+rules = rules[rules['zhang'] > 0.65]
+
+# Print rule
+print(rules[['antecedents','consequents']])
