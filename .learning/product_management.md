@@ -7,6 +7,8 @@
 3. Product teams
 4. Product manager
 5. Product designer
+6. The Engineers
+7. 
 
 
 
@@ -58,6 +60,32 @@ Product manager vs product owner: product owner is the person responsible for pr
 
 # 5. Product Designer
 *Rather than being measured by the output of their design work, the product designer is measured on the success of the product*
+
+Holistic User Experience Design: User Experience is much bigger than user interface. User Experience includes all the touch points and interactions a customer has with your product. Considering questions as:
+
+- How will the customer first learn about the product?
+- How will we onboard a first-time user and (perhaps gradually) reveal the new functionality?
+- How might users interact at different times during the day?
+- What other things are competing for the user's attention?
+- How might things be different for a one-month-old customer?
+- How will we motivate a user to a higher?
+- How will we create moments of gratification?
+- How will a user share his/her experience with others?
+- How will customers receive an offline service?
+- What is the perceived responsiveness of the product?
+
+Product design is important, Apple is one of the most design-conscious company in the world. Once you get a product designer:
+1. Do what ever you need to do to have your designer sit next to you
+2. Include your designer from the very inception of every idea
+3. Include your designer in as many customer and user interactions as possible. Learn about the users and customers together
+4. Fight your temptation to provide your designer with your own design ideas. Give your designer as much room as possible to solve the design challenges him or herself.
+5. Encourage your designer to iterate early and often.
+
+`We need design - not just as a service to make our service beautiful - but to discover the right product`
+
+# 6. Engineers
+*There's probably no more important relationship for a successful product manager than the one with your engineers*
+
 
 
 
