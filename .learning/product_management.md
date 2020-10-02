@@ -8,8 +8,15 @@
 4. Product manager
 5. Product designer
 6. The Engineers
-7. 
+7. Product Marketing
+8. Supporting roles
 
+# III. Profile
+
+1. Jane Manning of Google
+
+# IV. Team Development
+1. 
 
 
 # 1. Product discovery
@@ -93,7 +100,38 @@ Product design is important, Apple is one of the most design-conscious company i
 
 *User Researchers*
 Qualitative and Quantitative
+*Data Analyst*
 
+# III. Profile:
+
+Profile: Jane Manning of Google. Jane sit with all of the engineers and teams to understand the risk of building such products.
+- Google Adwords
+- Problem of Cannibalism and User Experience might be affected
+- instead of determining placement based solely on the price paid, they would use a formula that multiplied the price paid per impression with the ad’s performance (click-through-rate) to determineplacement,sothatthebest-performingads—theonesmost likely to be most relevant to users—would rise to the top, and the worst ads would be unlikely to be displayed at all.
+
+
+# IV. Team Development
+- Vision
+- Execution: The product leader should be expert on modern forms of product planning, customer discovery, product discovery, and product development process, but execution also means that they know how to work effectively as part of an organization of your size. 
+- Experience
+- Chemistry
+- principalproductmanager—a person who’s an individual contributor but a rock-star performer and willing and able to tackle the toughest product work
+
+`head of technology`
+- director of product management) where some number of product managers (usually some where between 3 and 10)reportdirectlytoyou
+-  Architecture: Make sure the infrastructure is continously monitored
+- Discovery: Make sure that members of the senior engineering staff are participating actively and contributing significantly throughout product discovery.If your engineer s and architects are only being used to write software, then you are only getting a fraction of the value from them you should be.
+`Delivery manager role`
+- Also know as the Scrum Master
+- Getting the product being delivered
+
+`Principles`
+1. Alignment with investment strategy
+2. Minimize Dependencies
+3. Ownership and Autonomy
+4. Maximize Leverage: We don't want every team to reinvent the wheel
+5. Product Vision and Strategy
+6.
 
 
 
