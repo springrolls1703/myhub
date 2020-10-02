@@ -86,7 +86,13 @@ Product design is important, Apple is one of the most design-conscious company i
 # 6. Engineers
 *There's probably no more important relationship for a successful product manager than the one with your engineers*
 
+# 7. Product Marketing
+*Modern product marketing managers represent the market to the product team—the positioning, the messaging, and a winning go-to-market plan. They are deeply engaged with the sales channel and know their capabilities, limitations, and current competitive issues*
 
+# 8. Supporting roles
+
+*User Researchers*
+Qualitative and Quantitative
 
 
 
