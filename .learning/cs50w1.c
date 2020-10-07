@@ -80,4 +80,12 @@ sudo
 clear
 telnet
 
+// Pseudocode
+// get a Positive Integer
+int n;
+do
+{
+    n = get_int("Positive Number: ");
+}
+while (n < 1);
 
