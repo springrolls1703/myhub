@@ -84,3 +84,9 @@ tval = (110-np.mean(scores))/stats.sem(scores) #normalize the sample error
 td = stats.t(len(scores)-1)
 p = 2*td.sf(tval)
 print(p)
+
+
+//
+Hi Ninja Van teams,
+
+With the passion of pursuing a career path in Ecommerce for years and specialized myself in performance marketing and project management. I'm looking forward to move my career into building products that makes people, not just love but remember it, use it again, and share it with others. Even though my background is more likely to be in marketing rather than software engineering, I believe it's not necessary a drawback, cause eventually building a product is not just about coding, it's about bringing it to the customer. I'm looking forward to hearing from you guys. aa
