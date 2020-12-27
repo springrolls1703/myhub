@@ -84,3 +84,5 @@ tval = (110-np.mean(scores))/stats.sem(scores) #normalize the sample error
 td = stats.t(len(scores)-1)
 p = 2*td.sf(tval)
 print(p)
+
+#hello
