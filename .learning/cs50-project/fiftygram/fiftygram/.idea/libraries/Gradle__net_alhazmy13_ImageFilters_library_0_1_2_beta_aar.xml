@@ -1,0 +1,15 @@
+<component name="libraryTable">
+  <library name="Gradle: net.alhazmy13.ImageFilters:library:0.1.2-beta@aar">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/../.gradle/caches/transforms-2/files-2.1/e93fee887af197f5db676b0e094eb62d/library-0.1.2-beta/jars/classes.jar!/" />
+      <root url="file://$PROJECT_DIR$/../.gradle/caches/transforms-2/files-2.1/e93fee887af197f5db676b0e094eb62d/library-0.1.2-beta/res" />
+      <root url="file://$PROJECT_DIR$/../.gradle/caches/transforms-2/files-2.1/e93fee887af197f5db676b0e094eb62d/library-0.1.2-beta/AndroidManifest.xml" />
+    </CLASSES>
+    <JAVADOC>
+      <root url="jar://$PROJECT_DIR$/../.gradle/caches/modules-2/files-2.1/net.alhazmy13.ImageFilters/library/0.1.2-beta/433d51d84bd01beace468830da76aa0da0b98c1e/library-0.1.2-beta-javadoc.jar!/" />
+    </JAVADOC>
+    <SOURCES>
+      <root url="jar://$PROJECT_DIR$/../.gradle/caches/modules-2/files-2.1/net.alhazmy13.ImageFilters/library/0.1.2-beta/42d2cc5c909e0062fa8592c862e044f778816b82/library-0.1.2-beta-sources.jar!/" />
+    </SOURCES>
+  </library>
+</component>

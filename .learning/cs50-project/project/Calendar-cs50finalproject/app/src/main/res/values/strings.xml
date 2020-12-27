@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">calendar</string>
+    <string name="event_title">Event title</string>
+    <string name="save">Save</string>
+    <string name="delete">Delete</string>
+    <string name="title_icon">Title Icon</string>
+    <string name="event_description">Event Description</string>
+</resources>
