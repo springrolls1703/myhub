@@ -20,7 +20,6 @@ values.add("two");
 for (String value : values) {
     System.out.println(value);
 }
-
 // Generics
 List<String> strings = new ArrayList<>();
 List<Integer> integers = new ArrayList<>();
