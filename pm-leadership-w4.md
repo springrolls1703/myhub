@@ -196,3 +196,38 @@ Cost of delay
 - Label the pain underneath
 - Remember that people want to understood
 
+Leverage the "No
+
+### Calibrate and Bend their reality:
+- Anchor emotions
+- Let them go First
+- Establish the range
+- Pivot to non-monetary term
+- Use odd numbers in detail
+- Order a gift
+
+### Calibrate their "illusion of control"
+- Use "What" and "How" questions - they solve your problem
+- Yes and How - you need both to complete the deal
+- Learn their religion - discover what you can leverage
+- Leverage - secure positive, negative, or normative leverage.
+
+# week 4: Modern Product Teams
+Key roles:
+- Product Manager: Business and product
+- Product Designer: UX acquisition
+- Technical Lead (Dev Lead): product work at scale
+- Dev/ Engineer
+
+Additional role:
+- CEO
+- Head of product: guide product manager
+- CTO
+- Delivery Manager: process done
+
+Typical process for achieving product success:
+1. Set Objectives
+2. Customer Discovery
+3. Product Discovery
+
+
