@@ -10,15 +10,15 @@ from facebookads.adobjects.business import Business
 # Import th csv writer and the date/time function
 import datetime
 import csv
-
+EAATHnkhVI1kBAO7ZCGz3pn8tlrfpSkOVA40amWeyZAmZAVWOl1VyZAZCRlhDFuAdbiYAEXkgbw1h7FLJTSVZBxN99kzAAn6FDEguR7dihK3Y77LpvNMfsf6IkZAWRhpgPAIrrN8S8Xqo1BWO7CcQZAXCxsFoaKy8mttdkLotETG6VeZBbkLEZA2jJZCZAGONuHCRvOMZD  
 # Set the info to get connected to the API. Do NOT share this info
-my_app_id = '****'
-my_app_secret = '****'
-my_access_token = '****'
+my_app_id = '1345382539141977'
+my_app_secret = '1e7614848c88ed5db10dbb287553c82f'
+my_access_token = 'EAATHnkhVI1kBAO7ZCGz3pn8tlrfpSkOVA40amWeyZAmZAVWOl1VyZAZCRlhDFuAdbiYAEXkgbw1h7FLJTSVZBxN99kzAAn6FDEguR7dihK3Y77LpvNMfsf6IkZAWRhpgPAIrrN8S8Xqo1BWO7CcQZAXCxsFoaKy8mttdkLotETG6VeZBbkLEZA2jJZCZAGONuHCRvOMZD'
 
 # Start the connection to the facebook API
 FacebookAdsApi.init(my_app_id, my_app_secret, my_access_token)
-
+ 
 # Create a business object for the business account
 business = Business('****')
 
