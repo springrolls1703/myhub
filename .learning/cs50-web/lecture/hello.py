@@ -1,0 +1,7 @@
+# n = int(input("Number: "))
+# print(n)
+k = set()
+k.add(1)
+k.add(2)
+k.add(3)
+print(f"There's {len(k)} elements in the set.")
