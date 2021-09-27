@@ -1,0 +1,26 @@
+{% extends "encyclopedia/layout.html" %}
+
+{% block title %}
+    Encyclopedia
+{% endblock %}
+
+{% block body %}
+<h1>Create a New Page</h1>
+<div class="create_new_page">
+    <form method="POST" action="{% url 'wiki:save-request' %}">
+        {% csrf_token %}
+        <div class="description_title_wrapper">
+            <input class="description_title" type="text" name="title" aria-autocomplete="both" aria-haspopup="false" autocapitalize="off" autocomplete="off" autocorrect="off" autofocus="" spellcheck="false" placeholder="Title">
+        </div>
+        <label for="description_label"></label>
+        <br>
+        <div>
+        <textarea class="description_text" name="description" rows="10" placeholder="Enter your description here"></textarea>
+        <br>
+        </div>
+        <div class="description_button">
+        <input type="submit" value="Submit">
+        </div>
+    </form>
+</div>
+{% endblock %}

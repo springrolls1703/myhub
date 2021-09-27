@@ -1,0 +1,41 @@
+{% extends "auctions/layout.html" %}
+
+{% block body %}
+<div class="create_listing_group">
+    <form action="{% url 'auctions:submit_listing' %}" method="POST">
+        {% csrf_token %}
+        <div class="form-group">
+            <label for="title_label">Title:</label>
+            <br>
+            <input class="form-control" type="text" name="title" aria-autocomplete="both" spellcheck="false" placeholder="Title">
+        </div>
+        <div class="form-group">
+            <label for="description_label">Description:</label>
+            <br>
+            <textarea class="form-control" id="description_text" name="description" placeholder="Enter your description here"></textarea>
+        </div>
+        <div class="form-group">
+            <label for="bid_label">Starting bid:</label>
+            <br>
+            <input class="form-control" name="starting_bid" placeholder="0.00" type="number" step="0.01"></textarea>
+        </div>
+        <div class="form-group">
+            <label for="url_label">Image URL (Optional):</label>
+            <br>
+            <input class="form-control" name="image_url" placeholder="image URL here"></textarea>
+        </div>
+        <div class="form-group">
+            <label for="category">Choose a category (Optional):</label>
+            <br>
+            <select class="form-control" name="category">
+                {% for category in category_list %}
+                <option value="{{category}}">{{category}}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group">
+            <input class="form-control" type="submit" value="Submit">
+        </div>
+    </form>
+</div>
+{% endblock %}

@@ -1,0 +1,29 @@
+{% extends "encyclopedia/layout.html" %}
+
+{% block title %}
+    Encyclopedia
+{% endblock %}
+
+{% block body %}
+    <div class="edit_button">
+        <a href="{% url 'wiki:title' title %}">Back</a>
+    </div>
+    <div class="content_area">
+        <form method="POST" action="{% url 'wiki:save-content' %}">
+            {% csrf_token %}
+            <div class="description_title_wrapper">
+                {{ title }}
+                <input type="hidden" name="title" value={{title}}>
+            </div>
+            <label for="description_label"></label>
+            <br>
+            <div>
+            <textarea class="description_text" name="description" rows="10">{% autoescape off %}{{ result }}{% endautoescape %}</textarea>
+            <br>
+            </div>
+            <div class="description_button">
+            <input type="submit" value="Save">
+            </div>
+        </form>
+    </div>
+{% endblock %}

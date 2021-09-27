@@ -1,0 +1,34 @@
+{% extends "auctions/layout.html" %}
+
+{% block body %}
+    <h2>Active Listings</h2>
+    <div class="card-deck">
+        {% for entry,entry2 in selected_listing %}
+            <div class="five-columns group">
+                <a href="{% url 'auctions:listing' entry.id %}">
+                <div class="card" style="width: 16rem;">
+                    <div class="card-body">
+                        <div class="image-listing">
+                            <img class="card-img-top contain" src="{{entry.image_url}}" alt="Card image cap">
+                        </div>
+                        <div class="index_title_wrap">
+                            <h5 class="card-title">{{ entry.title }}</h5>
+                        </div>
+                </a>
+                        <p class="card-subtitle mb-2 text-muted">Listed by: {{ entry.user.username }}</p>
+                        <p class="card-subtitle mb-2 description-listing">Description: {{ entry.description }}</p>
+                    </div>
+                    {% if entry2 %}
+                    <div class="card-footer">
+                        <small class="text-muted">Current bid:</small><p>${{entry2.bid}}</p>
+                    </div>
+                    {% else %}
+                    <div class="card-footer">
+                        <small class="text-muted">Current bid:</small><p>${{entry.starting_bid}}</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+{% endblock %}

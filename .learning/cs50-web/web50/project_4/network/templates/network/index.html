@@ -1,0 +1,40 @@
+{% extends "network/layout.html" %}
+{% load static %}
+
+{% block body %}
+    <div class="container">
+        <div class="profile">
+            
+        </div>
+        <div class="submitpost">
+            <form class="submitpost" method="POST" action="{% url 'new_post' %}">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label for="new_post">Make a new post</label>
+                    <textarea class="form-control" name="post" id="new_post" rows="3"></textarea>
+                </div>
+                <div>
+                    <button type="submit" class="btn btn-primary" style="margin-bottom: 20px;">Post</button>
+                </div>
+            </form>
+        </div>
+        <nav aria-label="..." >
+            <ul class="pagination">
+              <li class="page-item" id="previous">
+                <a class="page-link"  aria-disabled="true">Previous</a>
+              </li>
+              <li class="page-item" id="next">
+                <a class="page-link" aria-disabled="true">Next</a>
+              </li>
+            </ul>
+        </nav>
+        <div class="loadpost">
+        </div>
+        <div class="loadpost-profile">
+        </div>        
+    </div>
+{% endblock %}
+
+{% block script %}
+    <script src="{% static 'network/index.js' %}"></script>
+{% endblock %}
